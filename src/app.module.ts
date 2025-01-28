@@ -4,7 +4,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ExceptionInterceptor } from './interceptors/exception.interceptor';
 import { HealthModule } from './health/health.module';
-import { LegalEntityModule } from './legal-entity/legal-entity.module';
 import typeorm from './config/typeorm';
 import typeorm_test from './config/typeorm_test_config';
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
@@ -17,9 +16,7 @@ import { UsersFactory } from './database/seeders/factories/users.factory';
 import { User } from './database/models/user.entity';
 import { SettingsController } from './settings/settings.controller';
 import { SettingsModule } from './settings/settings.module';
-import { LegalEntitiesController } from './legal-entity/legal-entity.controller';
 // import { MainDatabaseSeeder } from './database/seeders/main.seeder';
-import { TestModule } from './test/test.module';
 // MODULE IMPORTS
 @Module({
   imports: [
@@ -41,9 +38,7 @@ import { TestModule } from './test/test.module';
         configService.get(NODE_ENV == 'test' ? 'typeorm_test' : 'typeorm'),
     }),
     HealthModule,
-    LegalEntityModule,
     SettingsModule,
-    TestModule,
     // MODULE EXPORTS
     TypeOrmModule.forFeature([User]),
   ],
