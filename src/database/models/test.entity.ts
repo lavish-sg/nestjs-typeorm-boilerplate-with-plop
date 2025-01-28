@@ -27,12 +27,6 @@ export class Test extends BaseEntity {
   @Column({ type: 'varchar', nullable: false, name: 'test_location' })
   testLocation: string;
 
-  // @Column('uuid')
-  // jobCodeId: string;
-
-  // @Column({ type: 'timestamptz', nullable: false })
-  // poDate: Date;
-
   @Expose()
   @Column({ type: 'varchar', nullable: true, name: 'test_reason' })
   testReason: string;
@@ -44,8 +38,6 @@ export class Test extends BaseEntity {
   @Expose()
   @UpdateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP', name: 'updated_at' })
   updatedAt: Date;
-
-  // date field, boolean, uuid.
 
   // uuid case for id field.
 }

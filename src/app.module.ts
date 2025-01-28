@@ -16,7 +16,6 @@ import { UsersFactory } from './database/seeders/factories/users.factory';
 import { User } from './database/models/user.entity';
 import { SettingsController } from './settings/settings.controller';
 import { SettingsModule } from './settings/settings.module';
-// import { MainDatabaseSeeder } from './database/seeders/main.seeder';
 // MODULE IMPORTS
 @Module({
   imports: [

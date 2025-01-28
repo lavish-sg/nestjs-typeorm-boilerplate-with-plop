@@ -63,131 +63,85 @@ module.exports = function (plop) {
         columns.push(match[1]);
       }
 
-      // Add necessary imports
-      const createDtoImports = `import { ApiProperty } from '@nestjs/swagger';\nimport { IsDefined, IsNotEmpty, IsOptional } from 'class-validator';\n`;
-      const updateDtoImports = `import { ApiProperty } from '@nestjs/swagger';\nimport { IsDefined, IsNotEmpty, IsOptional } from 'class-validator';\n`;
-      // Generate Create DTO content
-      const createDtoContent = columns
-        .map((column) => {
-          const columnRegex = new RegExp(
-            `@Column\\(\\{[^}]*nullable:\\s*(true|false)[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
-          );
-          const columnMatch = columnRegex.exec(entityFileContent);
-          const isNullable = columnMatch && columnMatch[1] === 'true';
+      // Add the necessary imports dynamically for each DTO
+      const commonImports = `import { ApiProperty } from '@nestjs/swagger';\nimport { IsDefined, IsNotEmpty, IsOptional } from 'class-validator';\n`;
+      const listDtoImports = `${commonImports}import { Expose } from 'class-transformer';\n`;
 
-          const enumRegex = new RegExp(
-            `@Column\\(\\{[^}]*type:\\s*'enum',\\s*enum:\\s*\\[([^\\]]+)\\][^}]*\\}\\)\\s+${column}:\\s+\\w+;`
-          );
-          const enumMatch = enumRegex.exec(entityFileContent);
-          const isEnum = !!enumMatch;
-          const enumValues = isEnum
-            ? enumMatch[1].split(',').map((val) => val.trim().replace(/'/g, ''))
-            : [];
+      // Generate content for Create, Update and List DTOs dynamically
+      const generateDtoContent = (columns, entityFileContent) => {
+        return columns
+          .map((column) => {
+            const columnRegex = new RegExp(
+              `@Column\\(\\{[^}]*nullable:\\s*(true|false)[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
+            );
+            const columnMatch = columnRegex.exec(entityFileContent);
+            const isNullable = columnMatch && columnMatch[1] === 'true';
 
-          const booleanRegex = new RegExp(
-            `@Column\\(\\{[^}]*type:\\s*'boolean'[^}]*\\}\\)\\s+${column}:\\s+\\w+(\\s*\\|\\s*\\w+)*;`
-          );
-          const isBoolean = booleanRegex.test(entityFileContent);
+            const enumRegex = new RegExp(
+              `@Column\\(\\{[^}]*type:\\s*'enum',\\s*enum:\\s*\\[([^\\]]+)\\][^}]*\\}\\)\\s+${column}:\\s+\\w+;`
+            );
+            const enumMatch = enumRegex.exec(entityFileContent);
+            const isEnum = !!enumMatch;
+            const enumValues = isEnum
+              ? enumMatch[1].split(',').map((val) => val.trim().replace(/'/g, ''))
+              : [];
 
-          const numberRegex = new RegExp(
-            `@Column\\(\\{[^}]*type:\\s*'int'[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
-          );
-          const isNumber = numberRegex.test(entityFileContent);
+            const booleanRegex = new RegExp(
+              `@Column\\(\\{[^}]*type:\\s*'boolean'[^}]*\\}\\)\\s+${column}:\\s+\\w+(\\s*\\|\\s*\\w+)*;`
+            );
+            const isBoolean = booleanRegex.test(entityFileContent);
 
-          const uuidRegex = new RegExp(`@Column\\(\\s*'uuid'\\s*\\)\\s+${column}:\\s+\\w+;`);
-          const isUUID = uuidRegex.test(entityFileContent);
+            const numberRegex = new RegExp(
+              `@Column\\(\\{[^}]*type:\\s*'int'[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
+            );
+            const isNumber = numberRegex.test(entityFileContent);
 
-          const dateRegex = new RegExp(
-            `@Column\\(\\{[^}]*type:\\s*'timestamptz'[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
-          );
-          const isDate = dateRegex.test(entityFileContent);
+            const uuidRegex = new RegExp(
+              `@Column\\(\\s*'uuid'\\s*\\)\\s+${column}:\\s+\\w+;`
+            );
+            const isUUID = uuidRegex.test(entityFileContent);
 
-          if (isEnum) {
-            return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ enum: [${enumValues.map((val) => `'${val}'`).join(', ')}], example: '${enumValues[0]}' })\n  ${column}: '${enumValues.join("' | '")}';\n`;
-          }
+            const dateRegex = new RegExp(
+              `@Column\\(\\{[^}]*type:\\s*'timestamptz'[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
+            );
+            const isDate = dateRegex.test(entityFileContent);
 
-          if (isBoolean) {
-            return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: true })\n  ${column}: boolean;\n`;
-          }
+            if (isEnum) {
+              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ enum: [${enumValues.map((val) => `'${val}'`).join(', ')}], example: '${enumValues[0]}' })\n  ${column}: '${enumValues.join("' | '")}';\n`;
+            }
 
-          if (isNumber) {
-            return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: 1 })\n  ${column}: number;\n`;
-          }
+            if (isNumber) {
+              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: 1 })\n  ${column}: number;\n`;
+            }
 
-          if (isUUID) {
-            return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: 'uuid' })\n  ${column}: string;\n`;
-          }
+            if (isBoolean) {
+              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: true })\n  ${column}: boolean;\n`;
+            }
 
-          if (isDate) {
-            return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '2023-01-01T00:00:00Z' })\n  ${column}: Date;\n`;
-          }
+            if (isUUID) {
+              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: 'uuid' })\n  ${column}: string;\n`;
+            }
 
-          return isNullable
-            ? `  @IsOptional()\n  @ApiProperty({ example: '${column}', required: false })\n  ${column}?: string;\n`
-            : `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '${column}' })\n  ${column}: string;\n`;
-        })
-        .join('\n');
-      // Generate Update DTO content
-      const updateDtoContent = columns
-        .map((column) => {
-          const columnRegex = new RegExp(
-            `@Column\\(\\{[^}]*nullable:\\s*(true|false)[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
-          );
-          const columnMatch = columnRegex.exec(entityFileContent);
-          const isNullable = columnMatch && columnMatch[1] === 'true';
+            if (isDate) {
+              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '2023-01-01T00:00:00Z' })\n  ${column}: Date;\n`;
+            }
 
-          const enumRegex = new RegExp(
-            `@Column\\(\\{[^}]*type:\\s*'enum',\\s*enum:\\s*\\[([^\\]]+)\\][^}]*\\}\\)\\s+${column}:\\s+\\w+;`
-          );
-          const enumMatch = enumRegex.exec(entityFileContent);
-          const isEnum = !!enumMatch;
-          const enumValues = isEnum
-            ? enumMatch[1].split(',').map((val) => val.trim().replace(/'/g, ''))
-            : [];
+            return isNullable
+              ? `  @IsOptional()\n  @ApiProperty({ example: '${column}', required: false })\n  ${column}?: string;\n`
+              : `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '${column}' })\n  ${column}: string;\n`;
+          })
+          .join('\n');
+      };
 
-          if (isEnum) {
-            return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ enum: [${enumValues.map((val) => `'${val}'`).join(', ')}], example: '${enumValues[0]}' })\n  ${column}: '${enumValues.join("' | '")}';\n`;
-          }
-
-          return isNullable
-            ? `  @IsOptional()\n  @ApiProperty({ example: '${column}', required: false })\n  ${column}?: string;\n`
-            : `  @IsOptional()\n  @ApiProperty({ example: '${column}', required: false })\n  ${column}?: string;\n`;
-        })
-        .join('\n');
-
-      // Generate List DTO content
-      const listDtoImports = `import { ApiProperty } from '@nestjs/swagger';\nimport { IsDefined, IsNotEmpty } from 'class-validator';\nimport { Expose } from 'class-transformer';\n`;
-      const listDtoContent = columns
-        .map((column) => {
-          const columnRegex = new RegExp(
-            `@Column\\(\\{[^}]*nullable:\\s*(true|false)[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
-          );
-          const columnMatch = columnRegex.exec(entityFileContent);
-          const isNullable = columnMatch && columnMatch[1] === 'true';
-
-          const enumRegex = new RegExp(
-            `@Column\\(\\{[^}]*type:\\s*'enum',\\s*enum:\\s*\\[([^\\]]+)\\][^}]*\\}\\)\\s+${column}:\\s+\\w+;`
-          );
-          const enumMatch = enumRegex.exec(entityFileContent);
-          const isEnum = !!enumMatch;
-          const enumValues = isEnum
-            ? enumMatch[1].split(',').map((val) => val.trim().replace(/'/g, ''))
-            : [];
-
-          if (isEnum) {
-            return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ enum: [${enumValues.map((val) => `'${val}'`).join(', ')}], example: '${enumValues[0]}' })\n  ${column}: '${enumValues.join("' | '")}';\n`;
-          }
-
-          return isNullable
-            ? `  @Expose()\n  @ApiProperty({ example: '${column}', required: false })\n  ${column}?: string;\n`
-            : `  @Expose()\n  @ApiProperty({ example: '${column}' })\n  ${column}: string;\n`;
-        })
-        .join('\n');
+      // Generating the actual content for Create, Update, and List DTOs
+      const createDtoContent = generateDtoContent(columns, entityFileContent);
+      const updateDtoContent = generateDtoContent(columns, entityFileContent);
+      const listDtoContent = generateDtoContent(columns, entityFileContent);
 
       // Combine imports and DTO content
       const fullListDtoContent = `${listDtoImports}\nexport class {{pascalCase moduleName}}Dto {\n${listDtoContent}\n}`;
-      const fullCreateDtoContent = `${createDtoImports}\nexport class Create{{pascalCase moduleName}}Dto {\n${createDtoContent}\n}`;
-      const fullUpdateDtoContent = `${updateDtoImports}\nexport class Update{{pascalCase moduleName}}Dto {\n${updateDtoContent}\n}`;
+      const fullCreateDtoContent = `${commonImports}\nexport class Create{{pascalCase moduleName}}Dto {\n${createDtoContent}\n}`;
+      const fullUpdateDtoContent = `${commonImports}\nexport class Update{{pascalCase moduleName}}Dto {\n${updateDtoContent}\n}`;
 
       const actions = [
         {
