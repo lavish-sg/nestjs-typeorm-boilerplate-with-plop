@@ -1,0 +1,158 @@
+{
+  "name": "@ctl/api-service",
+  "version": "0.0.1",
+  "description": "",
+  "author": "Studio Graphene CTL team",
+  "private": true,
+  "license": "PRIVATE",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "plop": "plop",
+    "build": "npm run lint && nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest --config ./test/jest-e2e.json --json --coverage --forceExit --detectOpenHandles --coverageReporters='json-summary' --coverageReporters='lcov'",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json --forceExit --detectOpenHandles",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "test:e2e:watch": "jest --config ./test/jest-e2e.json --watch",
+    "test:e2e:run": "jest --config ./test/jest-e2e.json --coverage --forceExit --detectOpenHandles",
+    "migration:run": "npm run typeorm migration:run -- -d ./dist/config/typeorm.js",
+    "migration:generate": "npm run typeorm -- -d ./dist/config/typeorm.js migration:generate ./src/database/migrations/$npm_config_name",
+    "migration:create": "npm run typeorm -- migration:create ./src/database/migrations/$npm_config_name",
+    "migration:revert": "npm run typeorm -- -d ./dist/config/typeorm.js migration:revert",
+    "prettier": "prettier --config --ignore-path .gitignore .prettierrc './**.ts' --check",
+    "prettier:fix": "prettier --config --ignore-path .gitignore .prettierrc './**.ts' --write",
+    "preinstall": "npx npm-force-resolutions",
+    "generate:new-nest-service": "ts-node src/utils/generate-nest-service.ts",
+    "seed": "ts-node dist/database/seeders/main.seeder.js"
+  },
+  "resolutions": {
+    "formidable": "3.2.4",
+    "locate-path": "5.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "3.669.0",
+    "@aws-sdk/client-s3": "^3.669.0",
+    "@aws-sdk/s3-request-presigner": "^3.669.0",
+    "@faker-js/faker": "^9.0.3",
+    "@nestjs/axios": "^3.0.3",
+    "@nestjs/common": "^10.4.4",
+    "@nestjs/config": "^3.2.3",
+    "@nestjs/core": "^10.4.4",
+    "@nestjs/platform-express": "^10.4.4",
+    "@nestjs/swagger": "^7.4.2",
+    "@nestjs/terminus": "^10.2.3",
+    "@nestjs/typeorm": "^10.0.2",
+    "@sentry/node": "^8.34.0",
+    "@testcontainers/postgresql": "^10.13.2",
+    "@types/faker": "^6.6.8",
+    "aws-jwt-verify": "^4.0.1",
+    "axios": "^1.7.7",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express-basic-auth": "^1.2.1",
+    "express-handlebars": "^8.0.1",
+    "faker": "^5.5.3",
+    "find-up": "^4.1.0",
+    "handlebars": "^4.7.8",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0",
+    "moment": "^2.30.1",
+    "nestjs-i18n": "^10.4.9",
+    "node-cache": "^5.1.2",
+    "nodemailer": "^6.9.15",
+    "nodemailer-express-handlebars": "^7.0.0",
+    "pg": "^8.13.0",
+    "plop": "^4.0.1",
+    "re2": "^1.21.4",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "sql-bricks": "^3.0.1",
+    "typeorm": "^0.3.20",
+    "typeorm-naming-strategies": "^4.1.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "@nestjs/cli": "^10.4.5",
+    "@nestjs/schematics": "^10.1.4",
+    "@nestjs/testing": "^10.4.4",
+    "@types/crypto-js": "^4.2.2",
+    "@types/date-fns": "^2.6.3",
+    "@types/express": "^5.0.0",
+    "@types/faker": "^6.6.8",
+    "@types/jest": "^29.5.13",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.7.5",
+    "@types/nodemailer": "^6.4.16",
+    "@types/supertest": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.1.0",
+    "@typescript-eslint/parser": "^8.1.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "husky": "^9.1.6",
+    "jest": "^29.7.0",
+    "jest-junit": "^16.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0",
+    "prettier": "^3.3.3",
+    "source-map-support": "^0.5.21",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.6.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "test",
+    "testRegex": ".*\\.test\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "coverageThreshold": {
+      "global": {
+        "branches": 10,
+        "functions": 20,
+        "lines": 60,
+        "statements": 60
+      }
+    },
+    "testEnvironment": "node"
+  },
+  "husky": {
+    "hooks": {
+      "pre-push": "npm run build",
+      "pre-commit": "npm run prettier && npm run lint && npx validate-branch-name",
+      "commit-msg": "npx --no -- commitlint --edit ${1}"
+    }
+  },
+  "validate-branch-name": {
+    "pattern": "^(master|main|dev|uat){1}$|^(feature|bugfix|hotfix|release)/[A-Z]{1,}-[0-9]{1,}",
+    "errorMsg": "Please follow the branch naming convention, eg: feature/CTL-001"
+  }
+}

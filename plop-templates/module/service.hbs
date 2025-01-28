@@ -1,0 +1,69 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm/repository/Repository';
+import { {{pascalCase entityName}} } from '@src/database/models/{{entityName}}.entity';
+import { Create{{pascalCase moduleName}}Dto } from './dto/create-{{kebabCase moduleName}}.dto';
+import { Update{{pascalCase moduleName}}Dto } from './dto/update-{{kebabCase moduleName}}.dto';
+
+@Injectable()
+export class {{properCase moduleName}}Service {
+  constructor(
+    @InjectRepository({{properCase entityName}})
+    private readonly {{camelCase entityName}}Repository: Repository<{{properCase entityName}}>
+  ) {}
+
+  async findAll(): Promise<{{properCase entityName}}[]> {
+    try {
+      const data = await this.{{camelCase entityName}}Repository.find();
+      return data;
+    } catch (err) {
+      throw new Error(`Failed to fetch {{sentenceCase entityName}}: ${err.message}`);
+    }
+  }
+
+  async findOne(id: string): Promise<{{properCase entityName}}> {
+    try {
+      const data = await this.{{camelCase entityName}}Repository.findOne({ where: { id: id } });
+      if (!data) {
+        throw new Error(`{{sentenceCase entityName}} not found`);
+      }
+      return data;
+    } catch (err) {
+      throw new Error(`Failed to fetch {{sentenceCase entityName}}: ${err.message}`);
+    }
+  }
+
+  async create(dto: Create{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
+    try {
+      const new{{pascalCase entityName}} = this.{{camelCase entityName}}Repository.create(dto);
+      return await this.{{camelCase entityName}}Repository.save(new{{pascalCase entityName}});
+    } catch (err) {
+      throw new Error(`Failed to create {{sentenceCase entityName}}: ${err.message}`);
+    }
+  }
+
+  async update(id: string, dto: Update{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
+    try {
+      const data = await this.{{camelCase entityName}}Repository.findOne({ where: { id: id } });
+      if (!data) {
+        throw new Error(`{{sentenceCase entityName}} not found`);
+      }
+      this.{{camelCase entityName}}Repository.merge(data, dto);
+      return await this.{{camelCase entityName}}Repository.save(data);
+    } catch (err) {
+      throw new Error(`Failed to update {{sentenceCase entityName}}: ${err.message}`);
+    }
+  }
+
+  async remove(id: string): Promise<{{pascalCase entityName}}> {
+    try {
+      const data = await this.{{camelCase entityName}}Repository.findOne({ where: { id: id } });
+      if (!data) {
+        throw new Error(`{{sentenceCase entityName}} not found`);
+      }
+      return await this.{{camelCase entityName}}Repository.remove(data);
+    } catch (err) {
+      throw new Error(`Failed to delete {{sentenceCase entityName}}: ${err.message}`);
+    }
+  }
+}

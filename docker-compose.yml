@@ -1,0 +1,66 @@
+services:
+  local-db:
+    image: postgres:15.3
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ctl_local
+    container_name: ctl-local-db
+    volumes:
+      - pgdata-local:/var/lib/postgresql/data
+    ports:
+      - '5430:5432'
+    networks:
+      - ctl-network
+    healthcheck:
+      test: 'pg_isready -q -U postgres'
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  ctl-api-service:
+    build:
+      context: .
+      dockerfile: dev/docker/Dockerfile
+    command: npm start
+    ports:
+      - '3001:3001'
+    networks:
+      - ctl-network
+    volumes:
+      - .:/var/app/ctl-api-service
+      - /var/app/ctl-api-service/node_modules
+    env_file:
+      - .env
+
+  test-db:
+    image: postgres:15.3
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ctl_test
+
+    container_name: ctl-test-db
+    volumes:
+      - pgdata-test:/var/lib/postgresql/data
+    ports:
+      - '5431:5432'
+    networks:
+      - ctl-network
+    tty: true
+    stdin_open: true
+    healthcheck:
+      test: 'pg_isready -q -U postgres'
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+networks:
+  ctl-network:
+    name: ctl-network
+
+volumes:
+  pgdata-local: {}
+  pgdata-test: {}

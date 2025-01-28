@@ -1,0 +1,22 @@
+{
+  "globalSetup": "<rootDir>/test/jest-global-setup.ts",
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "moduleNameMapper": {
+    "^@src/(.*)$": "<rootDir>/src/$1",
+    "^@test/(.*)$": "<rootDir>/test/$1"
+  },
+  "coveragePathIgnorePatterns": ["/node_modules/", "dist/", "src/database/migrations/"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": ".test.ts$",
+  "transform": {
+    "^.+\\.(ts|tsx)$": "ts-jest"
+  },
+  "transformIgnorePatterns": ["node_modules/(?!(locate-path|pkg-dir|find-up)/)"],
+  "verbose": true,
+  "setupFiles": ["<rootDir>/test/jest.setup.js"],
+  "reporters": [
+    "default",
+    ["jest-junit", { "outputDirectory": "coverage", "outputName": "report.xml" }]
+  ]
+}

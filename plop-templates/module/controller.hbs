@@ -1,0 +1,65 @@
+import {
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  HttpCode,
+  Post,
+  Body,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import { ApiOperation, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { {{pascalCase moduleName}}Service } from './{{kebabCase moduleName}}.service';
+import { ResponseMessage } from '@src/decorators/res.decorator';
+import { Create{{pascalCase moduleName}}Dto } from './dto/create-{{kebabCase moduleName}}.dto';
+import { Update{{pascalCase moduleName}}Dto } from './dto/update-{{kebabCase moduleName}}.dto';
+import { {{pascalCase moduleName}}Dto } from './dto/{{kebabCase moduleName}}.dto';
+import { {{pascalCase entityName}} } from '@src/database/models/{{entityName}}.entity';
+
+@Controller('{{kebabCase moduleName}}')
+@ApiTags('{{kebabCase moduleName}}')
+export class {{pascalCase moduleName}}Controller {
+  constructor(private readonly {{camelCase moduleName}}Service: {{pascalCase moduleName}}Service) {}
+
+  @Get('/')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Get list' })
+  @ResponseMessage('{{constantCase moduleName}}_FETCHED_SUCCESSFULLY')
+  @ApiOkResponse({ type: [{{pascalCase moduleName}}Dto] })
+  async findAll() {
+    return this.{{camelCase moduleName}}Service.findAll();
+  }
+
+  @Get(':id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Get one' })
+  @ResponseMessage('{{constantCase moduleName}}_BY_ID_FETCHED_SUCCESSFULLY')
+  @ApiOkResponse({ type: [{{pascalCase moduleName}}Dto] })
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{{pascalCase entityName}}> {
+    return this.{{camelCase moduleName}}Service.findOne(id);
+  }
+
+  @Post('/')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Create one' })
+  @ResponseMessage('{{constantCase moduleName}}_CREATED_SUCCESSFULLY')
+  async create(@Body() {{pascalCase moduleName}}Dto: Create{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
+    return this.{{camelCase moduleName}}Service.create({{pascalCase moduleName}}Dto);
+  }
+
+  @Patch(':id')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Update one' })
+  @ResponseMessage('{{constantCase moduleName}}_UPDATED_SUCCESSFULLY')
+  async update(@Param('id') id: string, @Body() dto: Update{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
+    return this.{{camelCase moduleName}}Service.update(id, dto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete one' })
+  @ResponseMessage('{{constantCase moduleName}}_DELETED_SUCCESSFULLY')
+  async remove(@Param('id') id: string) {
+    return this.{{camelCase moduleName}}Service.remove(id);
+  }
+}
