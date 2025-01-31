@@ -30,7 +30,7 @@ export class {{pascalCase moduleName}}Controller {
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ResponseMessage('{{constantCase moduleName}}_FETCHED_SUCCESSFULLY')
   @ApiOkResponse({ type: [{{pascalCase moduleName}}Dto] })
-  async findAll() {
+  async findAll(): Promise<{{pascalCase entityName}}[]> {
     return this.{{camelCase moduleName}}Service.findAll();
   }
 

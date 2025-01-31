@@ -124,7 +124,7 @@ module.exports = function (plop) {
             }
 
             if (isUUID) {
-              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: 'uuid' })\n  ${column}: string;\n`;
+              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '29debd42-e3d6-49dc-831b-53f971cd47f0' })\n  ${column}: string;\n`;
             }
 
             if (isDate) {
@@ -201,6 +201,12 @@ module.exports = function (plop) {
           template: '{{pascalCase moduleName}}Module,\n    $1',
           type: 'modify',
         },
+        {
+          type: 'modify',
+          path: 'src/i18n/en/common.json',
+          pattern: /(\{)/g,
+          template: `$1\n  "{{constantCase moduleName}}_FETCHED_SUCCESSFULLY": "{{sentenceCase moduleName}} fetched successfully!",\n  "{{constantCase moduleName}}_BY_ID_FETCHED_SUCCESSFULLY": "{{sentenceCase moduleName}} by id fetched successfully!",\n  "{{constantCase moduleName}}_CREATED_SUCCESSFULLY": "{{sentenceCase moduleName}} created successfully!",\n  "{{constantCase moduleName}}_UPDATED_SUCCESSFULLY": "{{sentenceCase moduleName}} updated successfully!",\n  "{{constantCase moduleName}}_DELETED_SUCCESSFULLY": "{{sentenceCase moduleName}} deleted successfully!",`,
+        },
       ];
 
       // if (data.addAuth) {
@@ -211,6 +217,90 @@ module.exports = function (plop) {
       //     type: 'modify',
       //   });
       // }
+
+      return actions;
+    },
+  });
+
+  plop.setGenerator('api', {
+    description: 'create a new API endpoint in an existing module',
+    prompts: [
+      {
+        type: 'list',
+        name: 'moduleName',
+        message: 'Select a module:',
+        choices: function () {
+          const appModulePath = path.resolve(process.cwd(), 'src/app.module.ts');
+          const appModuleContent = fs.readFileSync(appModulePath, 'utf8');
+          const moduleRegex = /import { (\w+)Module } from '\.\/(\w+)\/\2\.module';/g;
+          const modules = [];
+          let match;
+          while ((match = moduleRegex.exec(appModuleContent)) !== null) {
+            modules.push(match[2]);
+          }
+          return modules;
+        },
+      },
+      {
+        type: 'input',
+        name: 'apiName',
+        message: 'API name please',
+        validate: function (value) {
+          if (/.+/.test(value.trim())) {
+            return true;
+          }
+          return 'API name is required';
+        },
+      },
+      {
+        type: 'list',
+        name: 'apiType',
+        message: 'Select the API type:',
+        choices: ['Get', 'Post', 'Put', 'Delete', 'Patch'],
+      },
+    ],
+    actions: function (data) {
+      const apiMethod = data.apiType.toLowerCase();
+      const actions = [
+        {
+          type: 'modify',
+          path: 'src/{{moduleName}}/{{moduleName}}.controller.ts',
+          pattern: /(import { .* } from '@nestjs\/common';)/g,
+          template: `$1\nimport { {{properCase apiName}}Dto } from './dto/{{apiName}}.dto';`,
+        },
+        {
+          type: 'modify',
+          path: 'src/{{moduleName}}/{{moduleName}}.controller.ts',
+          pattern: /(export class .*Controller {)/g,
+          template: `$1\n\n  @${data.apiType}('{{apiName}}')\n  async {{camelCase apiName}}(@Body() {{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}({{camelCase apiName}}Dto);\n  }`,
+        },
+        {
+          type: 'modify',
+          path: 'src/{{moduleName}}/{{moduleName}}.service.ts',
+          pattern: /(import { Injectable } from '@nestjs\/common';)/g,
+          template: `$1\nimport { {{properCase apiName}}Dto } from './dto/{{apiName}}.dto';`,
+        },
+        {
+          type: 'modify',
+          path: 'src/{{moduleName}}/{{moduleName}}.service.ts',
+          pattern: /(export class .*Service {)/g,
+          template: `$1\n\n  async handle{{properCase apiName}}({{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} handled successfully', data: {{camelCase apiName}}Dto };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`,
+        },
+      ];
+
+      if (data.apiType === 'Get') {
+        actions[1].template = `$1\n\n  @${data.apiType}('{{apiName}}')\n  @HttpCode(200)\n  @ApiOperation({ summary: '{{sentenceCase apiName}}' })\n  @ApiResponse({ status: 200, description: '{{properCase apiName}} fetched successfully.' })\n  @ApiResponse({ status: 404, description: '{{properCase apiName}} not found.' })\n  @ApiResponse({ status: 500, description: 'Internal Server Error.' })\n  async {{camelCase apiName}}(@Param('id', ParseUUIDPipe) id: string) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}(id);\n  }`;
+        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} fetched successfully', data: id };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
+      } else if (data.apiType === 'Post') {
+        actions[1].template = `$1\n\n  @${data.apiType}('{{apiName}}')\n  @HttpCode(201)\n  @ApiOperation({ summary: '{{sentenceCase apiName}}' })\n  @ApiResponse({ status: 201, description: '{{properCase apiName}} created successfully.' })\n  @ApiResponse({ status: 400, description: 'Bad Request.' })\n  @ApiResponse({ status: 500, description: 'Internal Server Error.' })\n  async {{camelCase apiName}}(@Body() {{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}({{camelCase apiName}}Dto);\n  }`;
+        actions[3].template = `$1\n\n  async handle{{properCase apiName}}({{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} created successfully', data: {{camelCase apiName}}Dto };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
+      } else if (data.apiType === 'Put' || data.apiType === 'Patch') {
+        actions[1].template = `$1\n\n  @${data.apiType}('{{apiName}}')\n  @HttpCode(200)\n  @ApiOperation({ summary: '{{sentenceCase apiName}}' })\n  @ApiResponse({ status: 200, description: '{{properCase apiName}} updated successfully.' })\n  @ApiResponse({ status: 400, description: 'Bad Request.' })\n  @ApiResponse({ status: 404, description: '{{properCase apiName}} not found.' })\n  @ApiResponse({ status: 500, description: 'Internal Server Error.' })\n  async {{camelCase apiName}}(@Param('id', ParseUUIDPipe) id: string, @Body() {{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}(id, {{camelCase apiName}}Dto);\n  }`;
+        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string, {{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} updated successfully', data: { id, ...{{camelCase apiName}}Dto } };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
+      } else if (data.apiType === 'Delete') {
+        actions[1].template = `$1\n\n  @${data.apiType}('{{apiName}}')\n  @HttpCode(200)\n  @ApiOperation({ summary: '{{sentenceCase apiName}}' })\n  @ApiResponse({ status: 200, description: '{{properCase apiName}} deleted successfully.' })\n  @ApiResponse({ status: 404, description: '{{properCase apiName}} not found.' })\n  @ApiResponse({ status: 500, description: 'Internal Server Error.' })\n  async {{camelCase apiName}}(@Param('id', ParseUUIDPipe) id: string) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}(id);\n  }`;
+        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} deleted successfully', data: id };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
+      }
 
       return actions;
     },
