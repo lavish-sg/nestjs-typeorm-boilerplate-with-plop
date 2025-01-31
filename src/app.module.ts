@@ -14,7 +14,6 @@ import { FALLBACK_LANGUAGE, LANGUAGE_QUERY_PARAM, NODE_ENV } from './config/secr
 import { SentryInterceptor } from './interceptors/sentry.interceptor';
 import { UsersFactory } from './database/seeders/factories/users.factory';
 import { User } from './database/models/user.entity';
-import { SettingsController } from './settings/settings.controller';
 import { SettingsModule } from './settings/settings.module';
 // MODULE IMPORTS
 @Module({

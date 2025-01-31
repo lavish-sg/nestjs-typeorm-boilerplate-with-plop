@@ -96,6 +96,11 @@ module.exports = function (plop) {
             );
             const isNumber = numberRegex.test(entityFileContent);
 
+            const decimalRegex = new RegExp(
+              `@Column\\(\\{[^}]*type:\\s*'decimal'[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
+            );
+            const isDecimal = decimalRegex.test(entityFileContent);
+
             const uuidRegex = new RegExp(
               `@Column\\(\\s*'uuid'\\s*\\)\\s+${column}:\\s+\\w+;`
             );
@@ -110,7 +115,7 @@ module.exports = function (plop) {
               return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ enum: [${enumValues.map((val) => `'${val}'`).join(', ')}], example: '${enumValues[0]}' })\n  ${column}: '${enumValues.join("' | '")}';\n`;
             }
 
-            if (isNumber) {
+            if (isNumber || isDecimal) {
               return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: 1 })\n  ${column}: number;\n`;
             }
 

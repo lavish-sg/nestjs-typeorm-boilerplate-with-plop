@@ -9,20 +9,12 @@ export class LegalEntity extends BaseEntity {
   id: string;
 
   @Expose()
-  @Column({ type: 'uuid' })
-  clientId: string;
-
-  @Expose()
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
   @Expose()
   @Column({ type: 'varchar', length: 255, nullable: true })
-  addressLine1: string;
-
-  @Expose()
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  addressLine2: string;
+  address: string;
 
   @Expose()
   @Column({ type: 'varchar', length: 255, nullable: true })

@@ -9,7 +9,7 @@ import {
   Body,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiOkResponse, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { {{pascalCase moduleName}}Service } from './{{kebabCase moduleName}}.service';
 import { ResponseMessage } from '@src/decorators/res.decorator';
 import { Create{{pascalCase moduleName}}Dto } from './dto/create-{{kebabCase moduleName}}.dto';
@@ -25,6 +25,9 @@ export class {{pascalCase moduleName}}Controller {
   @Get('/')
   @HttpCode(200)
   @ApiOperation({ summary: 'Get list' })
+  @ApiResponse({ status: 200, description: 'List of {{sentenceCase entityName}} fetched successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ResponseMessage('{{constantCase moduleName}}_FETCHED_SUCCESSFULLY')
   @ApiOkResponse({ type: [{{pascalCase moduleName}}Dto] })
   async findAll() {
@@ -34,6 +37,9 @@ export class {{pascalCase moduleName}}Controller {
   @Get(':id')
   @HttpCode(200)
   @ApiOperation({ summary: 'Get one' })
+  @ApiResponse({ status: 200, description: '{{sentenceCase entityName}} fetched successfully.' })
+  @ApiResponse({ status: 404, description: '{{sentenceCase entityName}} not found.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ResponseMessage('{{constantCase moduleName}}_BY_ID_FETCHED_SUCCESSFULLY')
   @ApiOkResponse({ type: [{{pascalCase moduleName}}Dto] })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{{pascalCase entityName}}> {
@@ -42,6 +48,9 @@ export class {{pascalCase moduleName}}Controller {
 
   @Post('/')
   @HttpCode(201)
+  @ApiResponse({ status: 201, description: '{{sentenceCase entityName}} created successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ApiOperation({ summary: 'Create one' })
   @ResponseMessage('{{constantCase moduleName}}_CREATED_SUCCESSFULLY')
   async create(@Body() {{pascalCase moduleName}}Dto: Create{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
@@ -50,6 +59,10 @@ export class {{pascalCase moduleName}}Controller {
 
   @Patch(':id')
   @HttpCode(201)
+  @ApiResponse({ status: 201, description: '{{sentenceCase entityName}} updated successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 404, description: '{{sentenceCase entityName}} not found.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ApiOperation({ summary: 'Update one' })
   @ResponseMessage('{{constantCase moduleName}}_UPDATED_SUCCESSFULLY')
   async update(@Param('id') id: string, @Body() dto: Update{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
@@ -58,6 +71,9 @@ export class {{pascalCase moduleName}}Controller {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete one' })
+  @ApiResponse({ status: 200, description: '{{sentenceCase entityName}} deleted successfully.' })
+  @ApiResponse({ status: 404, description: '{{sentenceCase entityName}} not found.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ResponseMessage('{{constantCase moduleName}}_DELETED_SUCCESSFULLY')
   async remove(@Param('id') id: string) {
     return this.{{camelCase moduleName}}Service.remove(id);

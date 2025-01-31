@@ -9,10 +9,6 @@ export class Team extends BaseEntity {
   id: string;
 
   @Expose()
-  @Column({ type: 'uuid' })
-  clientId: string;
-
-  @Expose()
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
@@ -31,10 +27,6 @@ export class Team extends BaseEntity {
   @Expose()
   @Column({ type: 'boolean', default: true })
   isActive: boolean | string;
-
-  @Expose()
-  @Column({ type: 'uuid', nullable: true })
-  defaultRateCardId: string;
 
   @Column({ type: 'timestamp', nullable: true })
   deletedAt: Date;

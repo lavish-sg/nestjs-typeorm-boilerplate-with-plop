@@ -18,24 +18,14 @@ export class CreateLegalEntitiesTable1729251529273 implements MigrationInterface
             default: 'uuid_generate_v4()',
           },
           {
-            name: 'client_id',
-            type: 'uuid',
-            isNullable: false,
-          },
-          {
             name: 'name',
             type: 'varchar',
             isNullable: false,
           },
           {
-            name: 'address_line1',
+            name: 'address',
             type: 'varchar',
             isNullable: false,
-          },
-          {
-            name: 'address_line2',
-            type: 'varchar',
-            isNullable: true,
           },
           {
             name: 'country',
@@ -85,10 +75,6 @@ export class CreateLegalEntitiesTable1729251529273 implements MigrationInterface
 
     // required indexes on name
     await queryRunner.createIndex(this.tableName, new TableIndex({ columnNames: ['name'] }));
-    await queryRunner.createIndex(
-      this.tableName,
-      new TableIndex({ columnNames: ['address_line1'] })
-    );
     await queryRunner.createIndex(this.tableName, new TableIndex({ columnNames: ['tax_number'] }));
   }
 

@@ -53,7 +53,7 @@ export class Kernel {
       );
 
       const config = new DocumentBuilder()
-        .setTitle('API Documentation for CTL Backend')
+        .setTitle('API Documentation for Boilder Plate')
         .setDescription('API description')
         .addBearerAuth()
         // TODO: Get version from package.json

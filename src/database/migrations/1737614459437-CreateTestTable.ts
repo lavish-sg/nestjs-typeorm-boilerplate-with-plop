@@ -12,6 +12,7 @@ export class CreateTestTable1737614459437 implements MigrationInterface {
             type: 'uuid',
             isPrimary: true,
             isNullable: false,
+            default: 'uuid_generate_v4()',
           },
           {
             name: 'test_name',
