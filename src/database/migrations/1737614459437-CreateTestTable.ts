@@ -36,13 +36,13 @@ export class CreateTestTable1737614459437 implements MigrationInterface {
           },
           {
             name: 'created_at',
-            type: 'timestamptz',
-            isNullable: false,
+            type: 'timestamp',
+            default: 'CURRENT_TIMESTAMP',
           },
           {
             name: 'updated_at',
-            type: 'timestamptz',
-            isNullable: false,
+            type: 'timestamp',
+            default: 'CURRENT_TIMESTAMP',
           },
         ],
       })

@@ -55,13 +55,13 @@ export class {{properCase moduleName}}Service {
     }
   }
 
-  async remove(id: string): Promise<{{pascalCase entityName}}> {
+  async remove(id: string): Promise<void> {
     try {
       const data = await this.{{camelCase entityName}}Repository.findOne({ where: { id: id } });
       if (!data) {
         throw new Error(`{{sentenceCase entityName}} not found`);
       }
-      return await this.{{camelCase entityName}}Repository.remove(data);
+      await this.{{camelCase entityName}}Repository.remove(data);
     } catch (err) {
       throw new Error(`Failed to delete {{sentenceCase entityName}}: ${err.message}`);
     }

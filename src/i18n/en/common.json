@@ -1,8 +1,3 @@
 {
-  "PRODUCT_FETCHED_SUCCESSFULLY": "Product fetched successfully!",
-  "PRODUCT_BY_ID_FETCHED_SUCCESSFULLY": "Product by id fetched successfully!",
-  "PRODUCT_CREATED_SUCCESSFULLY": "Product created successfully!",
-  "PRODUCT_UPDATED_SUCCESSFULLY": "Product updated successfully!",
-  "PRODUCT_DELETED_SUCCESSFULLY": "Product deleted successfully!",
   "SYSTEM_STATUS": "System is running properly"
 }
