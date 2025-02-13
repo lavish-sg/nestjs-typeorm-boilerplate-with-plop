@@ -1,5 +1,14 @@
 const fs = require('fs');
 const path = require('path');
+const Handlebars = require('handlebars');
+
+Handlebars.registerHelper('eq', function (a, b) {
+  return a === b;
+});
+
+Handlebars.registerHelper('json', function (context) {
+  return JSON.stringify(context);
+});
 
 module.exports = function (plop) {
   plop.setGenerator('module', {
@@ -64,7 +73,19 @@ module.exports = function (plop) {
       }
 
       // Add the necessary imports dynamically for each DTO
-      const commonImports = `import { ApiProperty } from '@nestjs/swagger';\nimport { IsDefined, IsNotEmpty, IsOptional } from 'class-validator';\n`;
+      const commonImports = `import { ApiProperty } from '@nestjs/swagger';
+import { 
+  IsDefined, 
+  IsNotEmpty, 
+  IsOptional, 
+  IsUUID,
+  IsNumber,
+  IsDateString,
+  IsString,
+  IsBoolean,
+  IsEnum 
+} from 'class-validator';
+`;
       const listDtoImports = `${commonImports}import { Expose } from 'class-transformer';\n`;
 
       // Generate content for Create, Update and List DTOs dynamically
@@ -102,7 +123,7 @@ module.exports = function (plop) {
             const isDecimal = decimalRegex.test(entityFileContent);
 
             const uuidRegex = new RegExp(
-              `@Column\\(\\s*'uuid'\\s*\\)\\s+${column}:\\s+\\w+;`
+              `@Column\\(\\{[^}]*type:\\s*'uuid'[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
             );
             const isUUID = uuidRegex.test(entityFileContent);
 
@@ -111,12 +132,42 @@ module.exports = function (plop) {
             );
             const isDate = dateRegex.test(entityFileContent);
 
+            const jsonRegex = new RegExp(
+              `@Column\\(\\{[^}]*type:\\s*'jsonb'[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
+            );
+            const isJson = jsonRegex.test(entityFileContent);
+
+            const arrayRegex = new RegExp(
+              `@Column\\(\\{[^}]*type:\\s*'array'[^}]*\\}\\)\\s+${column}:\\s+\\w+;`
+            );
+            const isArray = arrayRegex.test(entityFileContent);
+
             if (isEnum) {
               return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ enum: [${enumValues.map((val) => `'${val}'`).join(', ')}], example: '${enumValues[0]}' })\n  ${column}: '${enumValues.join("' | '")}';\n`;
             }
 
-            if (isNumber || isDecimal) {
-              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: 1 })\n  ${column}: number;\n`;
+            if (isNumber) {
+              return `  @IsNotEmpty()
+  @IsDefined()
+  @IsNumber()
+  @ApiProperty({ 
+    example: 1,
+    type: 'number',
+    description: 'Integer value'
+  })
+  ${column}: number;\n`;
+            }
+
+            if (isDecimal) {
+              return `  @IsNotEmpty()
+  @IsDefined()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @ApiProperty({ 
+    example: 1.99,
+    type: 'number',
+    description: 'Decimal value'
+  })
+  ${column}: number;\n`;
             }
 
             if (isBoolean) {
@@ -124,11 +175,46 @@ module.exports = function (plop) {
             }
 
             if (isUUID) {
-              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '29debd42-e3d6-49dc-831b-53f971cd47f0' })\n  ${column}: string;\n`;
+              return `  @IsNotEmpty()
+  @IsDefined()
+  @IsUUID('4')
+  @ApiProperty({ 
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'UUID v4 format'
+  })
+  ${column}: string;\n`;
             }
 
             if (isDate) {
-              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '2023-01-01T00:00:00Z' })\n  ${column}: Date;\n`;
+              return `  @IsNotEmpty()
+  @IsDefined()
+  @IsDateString()
+  @ApiProperty({ 
+    example: '2023-01-01T00:00:00Z',
+    description: 'ISO 8601 date format'
+  })
+  ${column}: Date;\n`;
+            }
+
+            if (isJson) {
+              return `  @IsNotEmpty()
+  @IsDefined()
+  @ApiProperty({ 
+    example: { key: 'value' },
+    description: 'JSON object'
+  })
+  ${column}: Record<string, any>;\n`;
+            }
+
+            if (isArray) {
+              return `  @IsNotEmpty()
+  @IsDefined()
+  @ApiProperty({ 
+    example: [],
+    type: Array,
+    description: 'Array of items'
+  })
+  ${column}: any[];\n`;
             }
 
             return isNullable
@@ -290,19 +376,20 @@ module.exports = function (plop) {
 
       if (data.apiType === 'Get') {
         actions[1].template = `$1\n\n  @${data.apiType}('{{apiName}}')\n  @HttpCode(200)\n  @ApiOperation({ summary: '{{sentenceCase apiName}}' })\n  @ApiResponse({ status: 200, description: '{{properCase apiName}} fetched successfully.' })\n  @ApiResponse({ status: 404, description: '{{properCase apiName}} not found.' })\n  @ApiResponse({ status: 500, description: 'Internal Server Error.' })\n  async {{camelCase apiName}}(@Param('id', ParseUUIDPipe) id: string) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}(id);\n  }`;
-        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} fetched successfully', data: id };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
+        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string) {\n    try {\n      // Implement your business logic here\n      return { message: 'Data fetched successfully', data: id };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
       } else if (data.apiType === 'Post') {
         actions[1].template = `$1\n\n  @${data.apiType}('{{apiName}}')\n  @HttpCode(201)\n  @ApiOperation({ summary: '{{sentenceCase apiName}}' })\n  @ApiResponse({ status: 201, description: '{{properCase apiName}} created successfully.' })\n  @ApiResponse({ status: 400, description: 'Bad Request.' })\n  @ApiResponse({ status: 500, description: 'Internal Server Error.' })\n  async {{camelCase apiName}}(@Body() {{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}({{camelCase apiName}}Dto);\n  }`;
-        actions[3].template = `$1\n\n  async handle{{properCase apiName}}({{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} created successfully', data: {{camelCase apiName}}Dto };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
+        actions[3].template = `$1\n\n  async handle{{properCase apiName}}({{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    try {\n      // Implement your business logic here\n      return { message: 'Created successfully', data: {{camelCase apiName}}Dto };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
       } else if (data.apiType === 'Put' || data.apiType === 'Patch') {
         actions[1].template = `$1\n\n  @${data.apiType}('{{apiName}}')\n  @HttpCode(200)\n  @ApiOperation({ summary: '{{sentenceCase apiName}}' })\n  @ApiResponse({ status: 200, description: '{{properCase apiName}} updated successfully.' })\n  @ApiResponse({ status: 400, description: 'Bad Request.' })\n  @ApiResponse({ status: 404, description: '{{properCase apiName}} not found.' })\n  @ApiResponse({ status: 500, description: 'Internal Server Error.' })\n  async {{camelCase apiName}}(@Param('id', ParseUUIDPipe) id: string, @Body() {{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}(id, {{camelCase apiName}}Dto);\n  }`;
-        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string, {{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} updated successfully', data: { id, ...{{camelCase apiName}}Dto } };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
+        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string, {{camelCase apiName}}Dto: {{properCase apiName}}Dto) {\n    try {\n      // Implement your business logic here\n      return { message: 'Updated successfully', data: { id, ...{{camelCase apiName}}Dto } };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
       } else if (data.apiType === 'Delete') {
         actions[1].template = `$1\n\n  @${data.apiType}('{{apiName}}')\n  @HttpCode(200)\n  @ApiOperation({ summary: '{{sentenceCase apiName}}' })\n  @ApiResponse({ status: 200, description: '{{properCase apiName}} deleted successfully.' })\n  @ApiResponse({ status: 404, description: '{{properCase apiName}} not found.' })\n  @ApiResponse({ status: 500, description: 'Internal Server Error.' })\n  async {{camelCase apiName}}(@Param('id', ParseUUIDPipe) id: string) {\n    return this.{{camelCase moduleName}}Service.handle{{properCase apiName}}(id);\n  }`;
-        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string) {\n    try {\n      // Implement your business logic here\n      return { message: '{{properCase apiName}} deleted successfully', data: id };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
+        actions[3].template = `$1\n\n  async handle{{properCase apiName}}(id: string) {\n    try {\n      // Implement your business logic here\n      return { message: 'Deleted successfully', data: id };\n    } catch (err) {\n      throw new Error(\`Failed to handle {{properCase apiName}}: \${err.message}\`);\n    }\n  }`;
       }
 
       return actions;
     },
   });
+  
 };
