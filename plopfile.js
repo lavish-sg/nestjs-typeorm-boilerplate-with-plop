@@ -51,6 +51,42 @@ module.exports = function (plop) {
           }));
         },
       },
+      {
+        type: 'confirm',
+        name: 'includeRelations',
+        message: 'Do you want to include relation objects in the DTOs?',
+        default: true,
+        when: (answers) => {
+          // Read the entity file
+          const modelsDir = path.resolve(process.cwd(), 'src/database/models');
+          const entityFilePath = path.join(modelsDir, `${answers.entityName}.entity.ts`);
+          const entityFileContent = fs.readFileSync(entityFilePath, 'utf8');
+
+          // Check for any type of relationship decorator with arrow functions
+          const relationRegex = /(@ManyToOne|@OneToOne|@OneToMany|@ManyToMany)\s*\(\s*\(\)\s*=>\s*(\w+)/g;
+          let match;
+          const relations = [];
+          
+          while ((match = relationRegex.exec(entityFileContent)) !== null) {
+            const [_, decorator, entityType] = match;
+            const relatedEntityPath = path.join(modelsDir, `${entityType.toLowerCase()}.entity.ts`);
+            
+            if (fs.existsSync(relatedEntityPath)) {
+              relations.push({
+                decorator,
+                entityType: entityType.toLowerCase(),
+                exists: true
+              });
+              console.log(`Found relation: ${entityType} at ${relatedEntityPath}`);
+            } else {
+              console.log(`Warning: Related entity ${entityType} not found at ${relatedEntityPath}`);
+            }
+          }
+
+          answers.relations = relations;
+          return relations.length > 0;
+        }
+      },
       // {
       //   type: 'confirm',
       //   name: 'addAuth',
@@ -60,6 +96,13 @@ module.exports = function (plop) {
     ],
 
     actions: function (data) {
+      console.log('Data received in actions:', {
+        moduleName: data.moduleName,
+        entityName: data.entityName,
+        includeRelations: data.includeRelations,
+        relations: data.relations
+      });
+
       const modelsDir = path.resolve(process.cwd(), 'src/database/models');
       const entityFilePath = path.join(modelsDir, `${data.entityName}.entity.ts`);
       const entityFileContent = fs.readFileSync(entityFilePath, 'utf8');
@@ -85,8 +128,9 @@ import {
   IsBoolean,
   IsEnum 
 } from 'class-validator';
+import { Expose } from 'class-transformer';
 `;
-      const listDtoImports = `${commonImports}import { Expose } from 'class-transformer';\n`;
+      const listDtoImports = `${commonImports}`;
 
       // Generate content for Create, Update and List DTOs dynamically
       const generateDtoContent = (columns, entityFileContent) => {
@@ -143,11 +187,12 @@ import {
             const isArray = arrayRegex.test(entityFileContent);
 
             if (isEnum) {
-              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ enum: [${enumValues.map((val) => `'${val}'`).join(', ')}], example: '${enumValues[0]}' })\n  ${column}: '${enumValues.join("' | '")}';\n`;
+              return `  @Expose()\n  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ enum: [${enumValues.map((val) => `'${val}'`).join(', ')}], example: '${enumValues[0]}' })\n  ${column}: '${enumValues.join("' | '")}';\n`;
             }
 
             if (isNumber) {
-              return `  @IsNotEmpty()
+              return `  @Expose()
+  @IsNotEmpty()
   @IsDefined()
   @IsNumber()
   @ApiProperty({ 
@@ -159,7 +204,8 @@ import {
             }
 
             if (isDecimal) {
-              return `  @IsNotEmpty()
+              return `  @Expose()
+  @IsNotEmpty()
   @IsDefined()
   @IsNumber({ maxDecimalPlaces: 2 })
   @ApiProperty({ 
@@ -171,11 +217,12 @@ import {
             }
 
             if (isBoolean) {
-              return `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: true })\n  ${column}: boolean;\n`;
+              return `  @Expose()\n  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: true })\n  ${column}: boolean;\n`;
             }
 
             if (isUUID) {
-              return `  @IsNotEmpty()
+              return `  @Expose()
+  @IsNotEmpty()
   @IsDefined()
   @IsUUID('4')
   @ApiProperty({ 
@@ -186,7 +233,8 @@ import {
             }
 
             if (isDate) {
-              return `  @IsNotEmpty()
+              return `  @Expose()
+  @IsNotEmpty()
   @IsDefined()
   @IsDateString()
   @ApiProperty({ 
@@ -197,7 +245,8 @@ import {
             }
 
             if (isJson) {
-              return `  @IsNotEmpty()
+              return `  @Expose()
+  @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ 
     example: { key: 'value' },
@@ -207,7 +256,8 @@ import {
             }
 
             if (isArray) {
-              return `  @IsNotEmpty()
+              return `  @Expose()
+  @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ 
     example: [],
@@ -218,82 +268,146 @@ import {
             }
 
             return isNullable
-              ? `  @IsOptional()\n  @ApiProperty({ example: '${column}', required: false })\n  ${column}?: string;\n`
-              : `  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '${column}' })\n  ${column}: string;\n`;
+              ? `  @Expose()\n  @IsOptional()\n  @ApiProperty({ example: '${column}', required: false })\n  ${column}?: string;\n`
+              : `  @Expose()\n  @IsNotEmpty()\n  @IsDefined()\n  @ApiProperty({ example: '${column}' })\n  ${column}: string;\n`;
           })
           .join('\n');
       };
 
       // Generating the actual content for Create, Update, and List DTOs
+      const actions = []; // Define actions array here
+
+      const relationsDtoContent = data.includeRelations && data.relations ? 
+        data.relations.map(relation => {
+          if (relation.exists) {
+            const relatedEntityPath = path.join(modelsDir, `${relation.entityType}.entity.ts`);
+            const relatedEntityContent = fs.readFileSync(relatedEntityPath, 'utf8');
+            
+            // Extract columns from related entity
+            const relatedColumns = [];
+            let relMatch;
+            while ((relMatch = columnRegex.exec(relatedEntityContent)) !== null) {
+              relatedColumns.push(relMatch[1]);
+            }
+
+            // Generate DTO content for this relation
+            const dtoContent = generateDtoContent(relatedColumns, relatedEntityContent);
+            
+            // Create and add the relation DTO
+            actions.push({
+              type: 'add',
+              path: `src/${data.moduleName}/dto/${relation.entityType}.dto.ts`,
+              template: `${commonImports}\n\nexport class ${relation.entityType}Dto {\n${dtoContent}\n}`
+            });
+          }
+        }) : null;
+
       const createDtoContent = generateDtoContent(columns, entityFileContent);
       const updateDtoContent = generateDtoContent(columns, entityFileContent);
       const listDtoContent = generateDtoContent(columns, entityFileContent);
 
       // Combine imports and DTO content
-      const fullListDtoContent = `${listDtoImports}\nexport class {{pascalCase moduleName}}Dto {\n${listDtoContent}\n}`;
-      const fullCreateDtoContent = `${commonImports}\nexport class Create{{pascalCase moduleName}}Dto {\n${createDtoContent}\n}`;
-      const fullUpdateDtoContent = `${commonImports}\nexport class Update{{pascalCase moduleName}}Dto {\n${updateDtoContent}\n}`;
+      let fullListDtoContent = `${listDtoImports}`;
+      let fullCreateDtoContent = `${commonImports}`;
+      let fullUpdateDtoContent = `${commonImports}`;
 
-      const actions = [
-        {
-          type: 'add',
-          path: 'src/{{moduleName}}/dto/create-{{moduleName}}.dto.ts',
-          template: `${fullCreateDtoContent}`,
-          // abortOnFail: true,
+      // Add imports for relation DTOs if needed
+      if (data.includeRelations && data.relations) {
+        const relationImports = data.relations
+          .map(relation => `import { ${relation.entityType}Dto } from './${relation.entityType}.dto';`)
+          .join('\n');
+        
+        fullListDtoContent += `${relationImports}\n\n`;
+        fullCreateDtoContent += `${relationImports}\n\n`;
+        fullUpdateDtoContent += `${relationImports}\n\n`;
+      }
+
+      // Add class definitions with main content
+      fullListDtoContent += `export class {{pascalCase moduleName}}Dto {\n${listDtoContent}`;
+      fullCreateDtoContent += `export class Create{{pascalCase moduleName}}Dto {\n${createDtoContent}`;
+      fullUpdateDtoContent += `export class Update{{pascalCase moduleName}}Dto {\n${updateDtoContent}`;
+
+      // Add relation properties if needed
+      if (data.includeRelations && data.relations) {
+        const relationProperties = data.relations
+          .map(relation => `
+  @Expose()
+  @ApiProperty({ type: ${relation.entityType}Dto })
+  ${relation.entityType}: ${relation.entityType}Dto;`)
+          .join('\n');
+
+        fullListDtoContent += relationProperties;
+        fullCreateDtoContent += relationProperties;
+        fullUpdateDtoContent += relationProperties;
+      }
+
+      // Close the class definitions
+      fullListDtoContent += `\n}`;
+      fullCreateDtoContent += `\n}`;
+      fullUpdateDtoContent += `\n}`;
+
+      actions.push({
+        type: 'add',
+        path: 'src/{{moduleName}}/dto/create-{{moduleName}}.dto.ts',
+        template: `${fullCreateDtoContent}`,
+        // abortOnFail: true,
+      });
+      actions.push({
+        type: 'add',
+        path: 'src/{{moduleName}}/dto/update-{{moduleName}}.dto.ts',
+        template: `${fullUpdateDtoContent}`,
+      });
+      actions.push({
+        type: 'add',
+        path: 'src/{{moduleName}}/dto/{{moduleName}}.dto.ts',
+        template: `${fullListDtoContent}`,
+      });
+      actions.push({
+        type: 'add',
+        path: 'src/{{moduleName}}/{{moduleName}}.controller.ts',
+        templateFile: 'plop-templates/module/controller.hbs',
+      });
+      actions.push({
+        type: 'add',
+        path: 'src/{{moduleName}}/{{moduleName}}.service.ts',
+        templateFile: 'plop-templates/module/service.hbs',
+        data: { 
+          entityName: data.entityName,
+          relations: data.relations,
+          includeRelations: data.includeRelations
         },
-        {
-          type: 'add',
-          path: 'src/{{moduleName}}/dto/update-{{moduleName}}.dto.ts',
-          template: `${fullUpdateDtoContent}`,
-        },
-        {
-          type: 'add',
-          path: 'src/{{moduleName}}/dto/{{moduleName}}.dto.ts',
-          template: `${fullListDtoContent}`,
-        },
-        {
-          type: 'add',
-          path: 'src/{{moduleName}}/{{moduleName}}.controller.ts',
-          templateFile: 'plop-templates/module/controller.hbs',
-        },
-        {
-          type: 'add',
-          path: 'src/{{moduleName}}/{{moduleName}}.service.ts',
-          templateFile: 'plop-templates/module/service.hbs',
-          data: { entityName: data.entityName },
-        },
-        {
-          type: 'add',
-          path: 'src/{{moduleName}}/{{moduleName}}.module.ts',
-          templateFile: 'plop-templates/module/module.hbs',
-          data: { entityName: data.entityName },
-        },
-        {
-          type: 'add',
-          path: 'src/{{moduleName}}/{{moduleName}}.repository.ts',
-          templateFile: 'plop-templates/module/repository.hbs',
-          data: { entityName: data.entityName },
-        },
-        {
-          path: 'src/app.module.ts',
-          pattern: /(\/\/ MODULE IMPORTS)/g,
-          template:
-            "import { {{pascalCase moduleName}}Module } from './{{moduleName}}/{{moduleName}}.module';\n$1",
-          type: 'modify',
-        },
-        {
-          path: 'src/app.module.ts',
-          pattern: /(\/\/ MODULE EXPORTS)/g,
-          template: '{{pascalCase moduleName}}Module,\n    $1',
-          type: 'modify',
-        },
-        {
-          type: 'modify',
-          path: 'src/i18n/en/common.json',
-          pattern: /(\{)/g,
-          template: `$1\n  "{{constantCase moduleName}}_FETCHED_SUCCESSFULLY": "{{sentenceCase moduleName}} fetched successfully!",\n  "{{constantCase moduleName}}_BY_ID_FETCHED_SUCCESSFULLY": "{{sentenceCase moduleName}} by id fetched successfully!",\n  "{{constantCase moduleName}}_CREATED_SUCCESSFULLY": "{{sentenceCase moduleName}} created successfully!",\n  "{{constantCase moduleName}}_UPDATED_SUCCESSFULLY": "{{sentenceCase moduleName}} updated successfully!",\n  "{{constantCase moduleName}}_DELETED_SUCCESSFULLY": "{{sentenceCase moduleName}} deleted successfully!",`,
-        },
-      ];
+      });
+      actions.push({
+        type: 'add',
+        path: 'src/{{moduleName}}/{{moduleName}}.module.ts',
+        templateFile: 'plop-templates/module/module.hbs',
+        data: { entityName: data.entityName },
+      });
+      actions.push({
+        type: 'add',
+        path: 'src/{{moduleName}}/{{moduleName}}.repository.ts',
+        templateFile: 'plop-templates/module/repository.hbs',
+        data: { entityName: data.entityName },
+      });
+      actions.push({
+        path: 'src/app.module.ts',
+        pattern: /(\/\/ MODULE IMPORTS)/g,
+        template:
+          "import { {{pascalCase moduleName}}Module } from './{{moduleName}}/{{moduleName}}.module';\n$1",
+        type: 'modify',
+      });
+      actions.push({
+        path: 'src/app.module.ts',
+        pattern: /(\/\/ MODULE EXPORTS)/g,
+        template: '{{pascalCase moduleName}}Module,\n    $1',
+        type: 'modify',
+      });
+      actions.push({
+        type: 'modify',
+        path: 'src/i18n/en/common.json',
+        pattern: /(\{)/g,
+        template: `$1\n  "{{constantCase moduleName}}_FETCHED_SUCCESSFULLY": "{{sentenceCase moduleName}} fetched successfully!",\n  "{{constantCase moduleName}}_BY_ID_FETCHED_SUCCESSFULLY": "{{sentenceCase moduleName}} by id fetched successfully!",\n  "{{constantCase moduleName}}_CREATED_SUCCESSFULLY": "{{sentenceCase moduleName}} created successfully!",\n  "{{constantCase moduleName}}_UPDATED_SUCCESSFULLY": "{{sentenceCase moduleName}} updated successfully!",\n  "{{constantCase moduleName}}_DELETED_SUCCESSFULLY": "{{sentenceCase moduleName}} deleted successfully!",`,
+      });
 
       // if (data.addAuth) {
       //   actions.push({
@@ -392,4 +506,123 @@ import {
     },
   });
   
+  // plop.setGenerator("api-module", {
+  //   description: "Generate API module from LLD structure",
+  //   prompts: [
+  //     {
+  //       type: "input",
+  //       name: "lldPath",
+  //       message: "Enter the path to the LLD JSON file:"
+  //     }
+  //   ],
+  //   actions: (data) => {
+  //     const fs = require("fs");
+  //     const path = require("path");
+  //     const lldPath = path.resolve(process.cwd(), data.lldPath);
+  //     const lld = JSON.parse(fs.readFileSync(lldPath, "utf8"));
+  //     const moduleName = lld.module;
+  //     const modulePath = `src/${moduleName}`;
+
+  //     const actions = [];
+
+  //     // Extract unique API methods and their response messages from LLD
+  //     const apiMethodMap = {
+  //       'GET': 'FETCHED',
+  //       'POST': 'ADDED',
+  //       'PUT': 'UPDATED',
+  //       'PATCH': 'UPDATED',
+  //       'DELETE': 'DELETED'
+  //     };
+
+  //     // Create a Set to track unique messages
+  //     const messageSet = new Set();
+
+  //     lld.endpoints.forEach(endpoint => {
+  //       const type = apiMethodMap[endpoint.method];
+  //       if (type) {
+  //         const key = `${constantCase(moduleName)}_${type}_SUCCESSFULLY`;
+  //         const message = endpoint.response.message || `${sentenceCase(moduleName)} ${type.toLowerCase()} successfully`;
+          
+  //         // Only add if this message hasn't been added before
+  //         if (!messageSet.has(key)) {
+  //           messageSet.add(key);
+  //           actions.push({
+  //             type: 'modify',
+  //             path: 'src/i18n/en/common.json',
+  //             pattern: /(\{)/g,
+  //             template: `$1
+  //   "${key}": "${message}",`
+  //           });
+  //         }
+  //       }
+  //     });
+
+  //     if (fs.existsSync(modulePath)) {
+  //       actions.push({
+  //         type: "append",
+  //         path: `${modulePath}/${moduleName}.controller.ts`,
+  //         pattern: /(export class .*Controller {)/g,
+  //         templateFile: "plop-templates/dynamic-module/controller.hbs",
+  //         data: { lld, type: 'append' }
+  //       });
+
+  //       actions.push({
+  //         type: "append",
+  //         path: `${modulePath}/${moduleName}.service.ts`,
+  //         pattern: /(export class .*Service {)/g,
+  //         templateFile: "plop-templates/dynamic-module/service.hbs",
+  //         data: { lld, type: 'append' }
+  //       });
+  //     } else {
+  //       console.log("Module does not exist, creating new module...");
+        
+  //       actions.push({
+  //         type: "add",
+  //         path: `${modulePath}/${moduleName}.controller.ts`,
+  //         pattern: /(export class .*Controller {)/g,
+  //         templateFile: "plop-templates/dynamic-module/controller.hbs",
+  //         data: { lld, type: 'add' }
+  //       });
+
+  //       actions.push({
+  //         type: "add",
+  //         path: `${modulePath}/${moduleName}.service.ts`,
+  //         pattern: /(export class .*Service {)/g,
+  //         templateFile: "plop-templates/dynamic-module/service.hbs",
+  //         data: { lld, type: 'add' }
+  //       });
+
+  //       // actions.push({
+  //       //   type: 'add',
+  //       //   path: `${modulePath}/${moduleName}.module.ts`,
+  //       //   templateFile: 'plop-templates/dynamic-module/module.hbs',
+  //       //   data: { lld, type: 'add' }
+  //       // });
+
+  //       actions.push({
+  //         type: 'add',
+  //         path: 'src/{{moduleName}}/{{moduleName}}.repository.ts',
+  //         templateFile: 'plop-templates/dynamic-module/module.hbs',
+  //         data: { moduleName }
+  //       });
+
+  //       actions.push({
+  //         path: 'src/app.module.ts',
+  //         pattern: /(\/\/ MODULE IMPORTS)/g,
+  //         template:
+  //           "import { {{pascalCase moduleName}}Module } from './{{moduleName}}/{{moduleName}}.module';\n$1",
+  //         type: 'modify',
+  //       });
+
+  //       actions.push({
+  //         path: 'src/app.module.ts',
+  //         pattern: /(\/\/ MODULE EXPORTS)/g,
+  //         template: '{{pascalCase moduleName}}Module,\n    $1',
+  //         type: 'modify',
+  //       });
+  //     }
+
+  //     return actions;
+  //   }
+  // });
 };

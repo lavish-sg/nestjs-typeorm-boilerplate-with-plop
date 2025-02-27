@@ -1,7 +1,7 @@
-import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableIndex } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm';
 
-export class CreateLegalEntitiesTable1729251529273 implements MigrationInterface {
-  private readonly tableName = 'legal_entities';
+export class CreateTeamsTable1729580384642 implements MigrationInterface {
+  private readonly tableName = 'teams';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
@@ -27,39 +27,25 @@ export class CreateLegalEntitiesTable1729251529273 implements MigrationInterface
             isNullable: false,
           },
           {
-            name: 'address',
-            type: 'varchar',
-            isNullable: false,
-          },
-          {
-            name: 'country',
-            type: 'varchar',
-            isNullable: false,
-          },
-          {
-            name: 'state',
-            type: 'varchar',
-            isNullable: false,
-          },
-          {
-            name: 'zip_code',
+            name: 'poc_name',
             type: 'varchar',
             isNullable: true,
           },
           {
-            name: 'city_or_town',
+            name: 'poc_job_role',
             type: 'varchar',
             isNullable: true,
           },
           {
-            name: 'tax_number',
+            name: 'poc_email',
             type: 'varchar',
             isNullable: true,
           },
           {
-            name: 'notes',
-            type: 'text',
+            name: 'is_active',
+            type: 'boolean',
             isNullable: false,
+            default: true,
           },
           {
             name: 'created_at',
