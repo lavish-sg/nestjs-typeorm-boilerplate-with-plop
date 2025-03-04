@@ -4,18 +4,25 @@ import { Repository } from 'typeorm/repository/Repository';
 import { {{pascalCase entityName}} } from '@src/database/models/{{entityName}}.entity';
 import { Create{{pascalCase moduleName}}Dto } from './dto/create-{{kebabCase moduleName}}.dto';
 import { Update{{pascalCase moduleName}}Dto } from './dto/update-{{kebabCase moduleName}}.dto';
+{{#if includeRelations}}
+{{#each relations}}
+import { {{pascalCase entityType}} } from '@src/database/models/{{kebabCase entityType}}.entity';
+{{/each}}
+{{/if}}
 
 @Injectable()
 export class {{properCase moduleName}}Service {
   constructor(
     @InjectRepository({{properCase entityName}})
-    private readonly {{camelCase entityName}}Repository: Repository<{{properCase entityName}}>
+    private readonly {{camelCase entityName}}Repository: Repository<{{properCase entityName}}>{{#if includeRelations}}{{#each relations}},
+    @InjectRepository({{pascalCase entityType}})
+    private readonly {{camelCase entityType}}Repository: Repository<{{pascalCase entityType}}>{{/each}}{{/if}}
   ) {}
 
   async findAll(): Promise<{{properCase entityName}}[]> {
     try {
       const data = await this.{{camelCase entityName}}Repository.find({{#if includeRelations}}{{#if relations}}{
-        relations: { {{#each relations}}'{{entityType}}': true{{#unless @last}}, {{/unless}}{{/each}} }
+        relations: [{{#each relations}}'{{#if isArray}}{{camelCase entityType}}s{{else}}{{camelCase entityType}}{{/if}}'{{#unless @last}}, {{/unless}}{{/each}}]
       }{{/if}}{{/if}});
       return data;
     } catch (err) {
@@ -27,8 +34,8 @@ export class {{properCase moduleName}}Service {
     try {
       const data = await this.{{camelCase entityName}}Repository.findOne({ 
         where: { id: id }{{#if includeRelations}}{{#if relations}},
-        relations: { {{#each relations}}'{{entityType}}': true{{#unless @last}}, {{/unless}}{{/each}} }{{/if}}{{/if}}
-      });
+        relations: [{{#each relations}}'{{#if isArray}}{{camelCase entityType}}s{{else}}{{camelCase entityType}}{{/if}}'{{#unless @last}}, {{/unless}}{{/each}}]
+      }{{/if}}{{/if}});
       if (!data) {
         throw new Error(`{{sentenceCase entityName}} not found`);
       }
@@ -38,21 +45,70 @@ export class {{properCase moduleName}}Service {
     }
   }
 
-  async create(dto: Create{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
-    try {
-      const new{{pascalCase entityName}} = this.{{camelCase entityName}}Repository.create(dto);
-      return await this.{{camelCase entityName}}Repository.save(new{{pascalCase entityName}});
-    } catch (err) {
-      throw new Error(`Failed to create {{sentenceCase entityName}}: ${err.message}`);
-    }
+  async create(create{{pascalCase moduleName}}Dto: Create{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
+    // Start a transaction
+    return await this.{{camelCase entityName}}Repository.manager.transaction(async (transactionalEntityManager) => {
+      // First create the main entity without relations
+      const {{camelCase entityName}} = this.{{camelCase entityName}}Repository.create({
+        ...create{{pascalCase moduleName}}Dto
+      });
+      
+      const saved{{pascalCase entityName}} = await transactionalEntityManager.save({{camelCase entityName}});
+
+      {{#if includeRelations}}
+      {{#each relations}}
+      {{#if isArray}}
+      // Handle {{camelCase entityType}}s (OneToMany relation)
+      if (create{{pascalCase ../moduleName}}Dto.{{camelCase entityType}}s && create{{pascalCase ../moduleName}}Dto.{{camelCase entityType}}s.length > 0) {
+        const {{camelCase entityType}}s = [];
+        
+        for (const {{camelCase entityType}}Data of create{{pascalCase ../moduleName}}Dto.{{camelCase entityType}}s) {
+          const {{camelCase entityType}} = this.{{camelCase entityType}}Repository.create({
+            ...{{camelCase entityType}}Data
+          });
+          
+          // Set the foreign key explicitly
+          {{camelCase entityType}}.{{camelCase ../entityName}}Id = saved{{pascalCase ../entityName}}.id;
+          
+          // Save each related entity individually
+          const saved{{pascalCase entityType}} = await transactionalEntityManager.save({{camelCase entityType}});
+          {{camelCase entityType}}s.push(saved{{pascalCase entityType}});
+        }
+        
+        // Update the main entity's relation array
+        saved{{pascalCase ../entityName}}.{{camelCase entityType}}s = {{camelCase entityType}}s;
+      }
+      {{else}}
+      // Handle {{camelCase entityType}} (OneToOne relation)
+      if (create{{pascalCase ../moduleName}}Dto.{{camelCase entityType}}) {
+        const {{camelCase entityType}} = this.{{camelCase entityType}}Repository.create({
+          ...create{{pascalCase ../moduleName}}Dto.{{camelCase entityType}}
+        });
+        
+        // Set the foreign key explicitly
+        {{camelCase entityType}}.{{camelCase ../entityName}}Id = saved{{pascalCase ../entityName}}.id;
+        
+        // Save the related entity
+        const saved{{pascalCase entityType}} = await transactionalEntityManager.save({{camelCase entityType}});
+        
+        // Update the main entity with the relation
+        saved{{pascalCase ../entityName}}.{{camelCase entityType}} = saved{{pascalCase entityType}};
+      }
+      {{/if}}
+      {{/each}}
+      
+      // Save the main entity with updated relations
+      await transactionalEntityManager.save(saved{{pascalCase entityName}});
+      {{/if}}
+
+      // Return the saved entity
+      return saved{{pascalCase entityName}};
+    });
   }
 
   async update(id: string, dto: Update{{pascalCase moduleName}}Dto): Promise<{{pascalCase entityName}}> {
     try {
-      const data = await this.{{camelCase entityName}}Repository.findOne({ 
-        where: { id: id }{{#if includeRelations}}{{#if relations}},
-        relations: { {{#each relations}}'{{entityType}}': true{{#unless @last}}, {{/unless}}{{/each}} }{{/if}}{{/if}}
-      });
+      const data = await this.{{camelCase entityName}}Repository.findOne({ where: { id: id } });
       if (!data) {
         throw new Error(`{{sentenceCase entityName}} not found`);
       }

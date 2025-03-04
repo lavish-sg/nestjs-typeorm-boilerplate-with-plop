@@ -4,9 +4,20 @@ import { {{pascalCase moduleName}}Service } from './{{moduleName}}.service';
 import { {{pascalCase moduleName}}Controller } from './{{moduleName}}.controller';
 import { {{pascalCase moduleName}}Repository } from './{{moduleName}}.repository';
 import { {{pascalCase entityName}} } from '@src/database/models/{{entityName}}.entity';
+{{#if includeRelations}}
+{{#each relations}}
+import { {{pascalCase entityType}} } from '@src/database/models/{{entityType}}.entity';
+{{/each}}
+{{/if}}
 
 @Module({
-  imports: [TypeOrmModule.forFeature([{{pascalCase entityName}}])],
+  imports: [TypeOrmModule.forFeature([
+    {{pascalCase entityName}}{{#if includeRelations}},
+    {{#each relations}}
+    {{pascalCase entityType}}{{#unless @last}},{{/unless}}
+    {{/each}}
+    {{/if}}
+  ])],
   controllers: [{{pascalCase moduleName}}Controller],
   providers: [{{pascalCase moduleName}}Service, {{pascalCase moduleName}}Repository],
   exports: [{{pascalCase moduleName}}Service],

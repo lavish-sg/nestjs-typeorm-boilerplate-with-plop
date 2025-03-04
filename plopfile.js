@@ -62,8 +62,7 @@ module.exports = function (plop) {
           const entityFilePath = path.join(modelsDir, `${answers.entityName}.entity.ts`);
           const entityFileContent = fs.readFileSync(entityFilePath, 'utf8');
 
-          // Check for any type of relationship decorator with arrow functions
-          const relationRegex = /(@ManyToOne|@OneToOne|@OneToMany|@ManyToMany)\s*\(\s*\(\)\s*=>\s*(\w+)/g;
+          const relationRegex = /(@OneToOne|@OneToMany)\s*\(\s*\(\)\s*=>\s*(\w+)/g;
           let match;
           const relations = [];
           
@@ -75,6 +74,7 @@ module.exports = function (plop) {
               relations.push({
                 decorator,
                 entityType: entityType.toLowerCase(),
+                isArray: decorator === '@OneToMany',
                 exists: true
               });
               console.log(`Found relation: ${entityType} at ${relatedEntityPath}`);
@@ -126,9 +126,12 @@ import {
   IsDateString,
   IsString,
   IsBoolean,
-  IsEnum 
+  IsEnum,
+  IsArray,
+  ArrayMinSize
 } from 'class-validator';
 import { Expose } from 'class-transformer';
+import { Type } from 'class-transformer';
 `;
       const listDtoImports = `${commonImports}`;
 
@@ -287,7 +290,12 @@ import { Expose } from 'class-transformer';
             const relatedColumns = [];
             let relMatch;
             while ((relMatch = columnRegex.exec(relatedEntityContent)) !== null) {
-              relatedColumns.push(relMatch[1]);
+              const columnName = relMatch[1];
+              
+              // Skip relation columns (foreign keys) that end with 'Id'
+              if (!columnName.endsWith('Id')) {
+                relatedColumns.push(columnName);
+              }
             }
 
             // Generate DTO content for this relation
@@ -317,6 +325,7 @@ import { Expose } from 'class-transformer';
           .map(relation => `import { ${relation.entityType}Dto } from './${relation.entityType}.dto';`)
           .join('\n');
         
+        // Only add relation imports to list DTO
         fullListDtoContent += `${relationImports}\n\n`;
         fullCreateDtoContent += `${relationImports}\n\n`;
         fullUpdateDtoContent += `${relationImports}\n\n`;
@@ -327,13 +336,58 @@ import { Expose } from 'class-transformer';
       fullCreateDtoContent += `export class Create{{pascalCase moduleName}}Dto {\n${createDtoContent}`;
       fullUpdateDtoContent += `export class Update{{pascalCase moduleName}}Dto {\n${updateDtoContent}`;
 
-      // Add relation properties if needed
+      // Add relation properties if needed - only to list DTO
       if (data.includeRelations && data.relations) {
         const relationProperties = data.relations
-          .map(relation => `
+          .map(relation => {
+            // Get the related entity columns for example
+            const relatedEntityPath = path.join(modelsDir, `${relation.entityType}.entity.ts`);
+            const relatedEntityContent = fs.readFileSync(relatedEntityPath, 'utf8');
+            
+            // Extract columns from related entity for example
+            const relatedColumns = [];
+            let relMatch;
+            while ((relMatch = columnRegex.exec(relatedEntityContent)) !== null) {
+              const columnName = relMatch[1];
+              // Skip relation columns (foreign keys) that end with 'Id'
+              if (!columnName.endsWith('Id')) {
+                relatedColumns.push(columnName);
+              }
+            }
+            
+            // Create example object with first few columns
+            const exampleColumns = relatedColumns.slice(0, 4);
+            const exampleObj = exampleColumns.reduce((obj, col) => {
+              obj[col] = `${col} example`;
+              return obj;
+            }, {});
+            if (relation.isArray) {
+              
+              return `
   @Expose()
-  @ApiProperty({ type: ${relation.entityType}Dto })
-  ${relation.entityType}: ${relation.entityType}Dto;`)
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @Type(() => ${relation.entityType}Dto)
+  @ApiProperty({
+    type: [${relation.entityType}Dto],
+    isArray: true,
+    example: [${JSON.stringify(exampleObj, null, 6).replace(/"([^"]+)":/g, '$1:')}]
+  })
+  ${relation.entityType}s: ${relation.entityType}Dto[];`;
+            } else {
+              return `
+  @Expose()
+  @IsOptional()
+  @Type(() => ${relation.entityType}Dto)
+  @ApiProperty({ 
+    type: ${relation.entityType}Dto,
+    required: false,
+    example: ${JSON.stringify(exampleObj, null, 6).replace(/"([^"]+)":/g, '$1:')}
+  })
+  ${relation.entityType}: ${relation.entityType}Dto;`;
+            }
+          })
           .join('\n');
 
         fullListDtoContent += relationProperties;
@@ -381,7 +435,11 @@ import { Expose } from 'class-transformer';
         type: 'add',
         path: 'src/{{moduleName}}/{{moduleName}}.module.ts',
         templateFile: 'plop-templates/module/module.hbs',
-        data: { entityName: data.entityName },
+        data: { 
+          entityName: data.entityName,
+          relations: data.relations,
+          includeRelations: data.includeRelations
+        },
       });
       actions.push({
         type: 'add',
