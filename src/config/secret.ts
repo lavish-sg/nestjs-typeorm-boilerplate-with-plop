@@ -21,17 +21,10 @@ export const {
   POSTGRES_PORT,
   ENABLE_DB_LOGGING,
 
-  MS_CLIENT_ID,
-  MS_TENANT_ID,
-
   SENTRY_DSN,
   API_USERNAME,
   API_PASSWORD,
 
-  // Airtable
-  BASE_ID,
-  EMPLOYEE_TABLE_ID,
-  AIRTABLE_API_KEY,
 
-  CTL_API_BASE_URL,
+  API_BASE_URL,
 } = process.env;

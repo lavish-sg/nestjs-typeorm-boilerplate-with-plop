@@ -14,7 +14,6 @@ import { FALLBACK_LANGUAGE, LANGUAGE_QUERY_PARAM, NODE_ENV } from './config/secr
 import { SentryInterceptor } from './interceptors/sentry.interceptor';
 import { UsersFactory } from './database/seeders/factories/users.factory';
 import { User } from './database/models/user.entity';
-import { SettingsModule } from './settings/settings.module';
 // MODULE IMPORTS
 @Module({
   imports: [
@@ -36,7 +35,6 @@ import { SettingsModule } from './settings/settings.module';
         configService.get(NODE_ENV == 'test' ? 'typeorm_test' : 'typeorm'),
     }),
     HealthModule,
-    SettingsModule,
     // MODULE EXPORTS
     TypeOrmModule.forFeature([User]),
   ],
@@ -65,14 +63,13 @@ import { SettingsModule } from './settings/settings.module';
     },
   ],
 })
+
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply()
       .forRoutes(
-        // UserController,
-        // SettingsController,
-        // LegalEntitiesController,
+        //
       );
   }
 }

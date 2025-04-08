@@ -34,8 +34,8 @@ export class {{properCase moduleName}}Service {
     try {
       const data = await this.{{camelCase entityName}}Repository.findOne({ 
         where: { id: id }{{#if includeRelations}}{{#if relations}},
-        relations: [{{#each relations}}'{{#if isArray}}{{camelCase entityType}}s{{else}}{{camelCase entityType}}{{/if}}'{{#unless @last}}, {{/unless}}{{/each}}]
-      }{{/if}}{{/if}});
+        relations: [{{#each relations}}'{{#if isArray}}{{camelCase entityType}}s{{else}}{{camelCase entityType}}{{/if}}'{{#unless @last}}, {{/unless}}{{/each}}]{{/if}}{{/if}}
+      });
       if (!data) {
         throw new Error(`{{sentenceCase entityName}} not found`);
       }
@@ -113,6 +113,7 @@ export class {{properCase moduleName}}Service {
         throw new Error(`{{sentenceCase entityName}} not found`);
       }
       this.{{camelCase entityName}}Repository.merge(data, dto);
+
       return await this.{{camelCase entityName}}Repository.save(data);
     } catch (err) {
       throw new Error(`Failed to update {{sentenceCase entityName}}: ${err.message}`);
